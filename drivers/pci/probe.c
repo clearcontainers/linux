@@ -181,6 +181,11 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
 
 	mask = type ? PCI_ROM_ADDRESS_MASK : ~0;
 
+
+	res->name = pci_name(dev);
+
+	printk("Starting probe for %s\n", res->name);
+
 	/* No printks while decoding is disabled! */
 	if (!dev->mmio_always_on) {
 		pci_read_config_word(dev, PCI_COMMAND, &orig_cmd);
@@ -190,7 +195,6 @@ int __pci_read_base(struct pci_dev *dev, enum pci_bar_type type,
 		}
 	}
 
-	res->name = pci_name(dev);
 
 	pci_read_config_dword(dev, pos, &l);
 	pci_write_config_dword(dev, pos, l | mask);
@@ -319,6 +323,8 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
 {
 	unsigned int pos, reg;
 
+	printk("pci_read_bases start\n");
+
 	for (pos = 0; pos < howmany; pos++) {
 		struct resource *res = &dev->resource[pos];
 		reg = PCI_BASE_ADDRESS_0 + (pos << 2);
@@ -327,11 +333,13 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
 
 	if (rom) {
 		struct resource *res = &dev->resource[PCI_ROM_RESOURCE];
+		printk("rom path\n");
 		dev->rom_base_reg = rom;
 		res->flags = IORESOURCE_MEM | IORESOURCE_PREFETCH |
 				IORESOURCE_READONLY | IORESOURCE_SIZEALIGN;
 		__pci_read_base(dev, pci_bar_mem32, res, rom);
 	}
+	printk("pci_read_bases end\n");
 }
 
 static void pci_read_bridge_io(struct pci_bus *child)
@@ -1158,6 +1166,28 @@ static void pci_msi_setup_pci_dev(struct pci_dev *dev)
 		pci_msix_clear_and_set_ctrl(dev, PCI_MSIX_FLAGS_ENABLE, 0);
 }
 
+static int guess_bar_count(int class)
+{
+        if (class == 0x068000)
+            return 0;
+        if (class == 0x020000)
+            return 2;
+        if (class == 0x010000)
+            return 2;
+        if (class == 0x00ff00)
+            return 1;
+        return 6;
+}
+
+static int has_rom(int class, int rom)
+{
+        if (class == 0x020000)
+          return 0;
+        if (class == 0x010000 || class == 0x00ff00)
+          return 0;
+        return rom;
+}
+
 /**
  * pci_setup_device - fill in class and map information of a device
  * @dev: the device structure to fill
@@ -1175,6 +1205,9 @@ int pci_setup_device(struct pci_dev *dev)
 	int pos = 0;
 	struct pci_bus_region region;
 	struct resource *res;
+	int maxbar;
+
+	printk("pci_setup_device start\n");
 
 	if (pci_read_config_byte(dev, PCI_HEADER_TYPE, &hdr_type))
 		return -EIO;
@@ -1219,7 +1252,11 @@ int pci_setup_device(struct pci_dev *dev)
 		if (class == PCI_CLASS_BRIDGE_PCI)
 			goto bad;
 		pci_read_irq(dev);
-		pci_read_bases(dev, 6, PCI_ROM_ADDRESS);
+
+		maxbar = guess_bar_count(dev->class);
+
+		if (class != PCI_CLASS_STORAGE_IDE)
+			pci_read_bases(dev, maxbar, has_rom(dev->class, PCI_ROM_ADDRESS));
 		pci_read_config_word(dev, PCI_SUBSYSTEM_VENDOR_ID, &dev->subsystem_vendor);
 		pci_read_config_word(dev, PCI_SUBSYSTEM_ID, &dev->subsystem_device);
 
@@ -1303,6 +1340,8 @@ int pci_setup_device(struct pci_dev *dev)
 			dev->class, dev->hdr_type);
 		dev->class = PCI_CLASS_NOT_DEFINED << 8;
 	}
+
+	printk("pci_setup_device end\n");
 
 	/* We found a fine healthy device, go go go... */
 	return 0;
