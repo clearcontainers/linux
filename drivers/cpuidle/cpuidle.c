@@ -307,8 +307,11 @@ void cpuidle_uninstall_idle_handler(void)
 	/*
 	 * Make sure external observers (such as the scheduler)
 	 * are done looking at pointed idle states.
+	 * This is only relevant if there is more than one cpu,
+	 * if there is only one CPU, that is us... and we're
+	 * coherent to ourselves.
 	 */
-	synchronize_rcu();
+
 }
 
 /**
