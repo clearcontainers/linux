@@ -605,7 +605,7 @@ wakeup_secondary_cpu_via_init(int phys_apicid, unsigned long start_eip)
 	pr_debug("Waiting for send to finish...\n");
 	send_status = safe_apic_wait_icr_idle();
 
-	udelay(init_udelay);
+	udelay(100);
 
 	pr_debug("Deasserting INIT\n");
 
