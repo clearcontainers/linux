@@ -28,6 +28,7 @@
 #include <linux/slab.h>
 #include <linux/ramfs.h>
 #include <linux/shmem_fs.h>
+#include <linux/async.h>
 
 #include <linux/nfs_fs.h>
 #include <linux/nfs_fs_sb.h>
@@ -563,7 +564,8 @@ void __init prepare_namespace(void)
 	 * For example, it is not atypical to wait 5 seconds here
 	 * for the touchpad of a laptop to initialize.
 	 */
-	wait_for_device_probe();
+	//wait_for_device_probe();
+	async_synchronize_full();
 
 	md_run_setup();
 
