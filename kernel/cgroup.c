@@ -67,7 +67,7 @@
  * Expiring in the middle is a performance problem not a correctness one.
  * 1 sec should be enough.
  */
-#define CGROUP_PIDLIST_DESTROY_DELAY	HZ
+#define CGROUP_PIDLIST_DESTROY_DELAY	round_jiffies_relative(HZ)
 
 #define CGROUP_FILE_NAME_MAX		(MAX_CGROUP_TYPE_NAMELEN +	\
 					 MAX_CFTYPE_NAME + 2)
@@ -4648,8 +4648,9 @@ static struct cftype cgroup_legacy_base_files[] = {
  */
 static void css_free_work_fn(struct work_struct *work)
 {
+	struct delayed_work *dwork = to_delayed_work(work);
 	struct cgroup_subsys_state *css =
-		container_of(work, struct cgroup_subsys_state, destroy_work);
+		container_of(dwork, struct cgroup_subsys_state, destroy_work);
 	struct cgroup_subsys *ss = css->ss;
 	struct cgroup *cgrp = css->cgroup;
 
@@ -4698,14 +4699,15 @@ static void css_free_rcu_fn(struct rcu_head *rcu_head)
 	struct cgroup_subsys_state *css =
 		container_of(rcu_head, struct cgroup_subsys_state, rcu_head);
 
-	INIT_WORK(&css->destroy_work, css_free_work_fn);
-	queue_work(cgroup_destroy_wq, &css->destroy_work);
+	INIT_DELAYED_WORK(&css->destroy_work, css_free_work_fn);
+	queue_delayed_work(cgroup_destroy_wq, &css->destroy_work, CGROUP_PIDLIST_DESTROY_DELAY);
 }
 
 static void css_release_work_fn(struct work_struct *work)
 {
+	struct delayed_work *dwork = to_delayed_work(work);
 	struct cgroup_subsys_state *css =
-		container_of(work, struct cgroup_subsys_state, destroy_work);
+		container_of(dwork, struct cgroup_subsys_state, destroy_work);
 	struct cgroup_subsys *ss = css->ss;
 	struct cgroup *cgrp = css->cgroup;
 
@@ -4744,8 +4746,9 @@ static void css_release(struct percpu_ref *ref)
 	struct cgroup_subsys_state *css =
 		container_of(ref, struct cgroup_subsys_state, refcnt);
 
-	INIT_WORK(&css->destroy_work, css_release_work_fn);
-	queue_work(cgroup_destroy_wq, &css->destroy_work);
+	INIT_DELAYED_WORK(&css->destroy_work, css_release_work_fn);
+	queue_delayed_work(cgroup_destroy_wq, &css->destroy_work, CGROUP_PIDLIST_DESTROY_DELAY);
+
 }
 
 static void init_and_link_css(struct cgroup_subsys_state *css,
@@ -5021,8 +5024,9 @@ out_destroy:
  */
 static void css_killed_work_fn(struct work_struct *work)
 {
+	struct delayed_work *dwork = to_delayed_work(work);
 	struct cgroup_subsys_state *css =
-		container_of(work, struct cgroup_subsys_state, destroy_work);
+		container_of(dwork, struct cgroup_subsys_state, destroy_work);
 
 	mutex_lock(&cgroup_mutex);
 
@@ -5043,8 +5047,8 @@ static void css_killed_ref_fn(struct percpu_ref *ref)
 		container_of(ref, struct cgroup_subsys_state, refcnt);
 
 	if (atomic_dec_and_test(&css->online_cnt)) {
-		INIT_WORK(&css->destroy_work, css_killed_work_fn);
-		queue_work(cgroup_destroy_wq, &css->destroy_work);
+		INIT_DELAYED_WORK(&css->destroy_work, css_killed_work_fn);
+		queue_delayed_work(cgroup_destroy_wq, &css->destroy_work, CGROUP_PIDLIST_DESTROY_DELAY);
 	}
 }
 
