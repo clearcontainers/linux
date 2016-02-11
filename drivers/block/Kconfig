@@ -547,4 +547,10 @@ config BLK_DEV_RSXX
 	  To compile this driver as a module, choose M here: the
 	  module will be called rsxx.
 
+config BLK_DEV_PLKVM
+	tristate "LKVM mapped memory block driver"
+	depends on BLOCK && PCI
+	help
+	  Experimental driver for lkvm pmem objects
+
 endif # BLK_DEV
