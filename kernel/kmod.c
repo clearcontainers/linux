@@ -557,7 +557,7 @@ int call_usermodehelper_exec(struct subprocess_info *sub_info, int wait)
 	DECLARE_COMPLETION_ONSTACK(done);
 	int retval = 0;
 
-	if (!sub_info->path) {
+	if (!sub_info->path || system_state == SYSTEM_BOOTING) {
 		call_usermodehelper_freeinfo(sub_info);
 		return -EINVAL;
 	}
