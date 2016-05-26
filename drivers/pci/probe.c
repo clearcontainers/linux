@@ -1327,7 +1327,7 @@ static int guess_bar_count(int class)
         if (class == 0x068000)
             return 0;
         if (class == 0x020000)
-            return 2;
+            return 4;
         if (class == 0x010000)
             return 2;
         if (class == 0x00ff00)
