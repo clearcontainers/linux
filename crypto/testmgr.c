@@ -36,7 +36,7 @@
 
 #include "internal.h"
 
-static bool notests;
+static bool notests = true;
 module_param(notests, bool, 0644);
 MODULE_PARM_DESC(notests, "disable crypto self-tests");
 
