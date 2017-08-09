@@ -44,10 +44,10 @@ Module.symvers
 /tags
 /TAGS
 /linux
-/vmlinux
+#/vmlinux
 /vmlinux.32
 /vmlinux-gdb.py
-/vmlinuz
+#/vmlinuz
 /System.map
 /Module.markers
 
